@@ -4,12 +4,13 @@ import random
 import sys
 import time
 import pygame as pg
+import pygame.mixer
+import time
 
 
 WIDTH = 1600  # ゲームウィンドウの幅
 HEIGHT = 900  # ゲームウィンドウの高さ
 MAIN_DIR = os.path.split(os.path.abspath(__file__))[0]
-
 
 def check_bound(obj: pg.Rect) -> tuple[bool, bool]:
     """
@@ -193,7 +194,7 @@ class NeoBeam(pg.sprite.Sprite):
     """
     def __init__(self, bird:Bird, num:int):
         super().__init__()
-        self.num = num
+        self.num = num 
         self.bird = bird
     def gen_beams(self):
         beams = []
@@ -310,10 +311,18 @@ class Gravity(pg.sprite.Sprite):
             self.kill()
 
 def main():
+    sound = pygame.mixer.Sound(f"{MAIN_DIR}/koukaon.mp3")#ビームの発射音
+    sounds = pygame.mixer.Sound(f"{MAIN_DIR}/Big_Hits.mp3")#敵に当たったときの音
+    sound1 = pygame.mixer.Sound(f"{MAIN_DIR}/出現.mp3")#敵が出た時
+    enamy = pygame.mixer.Sound(f"{MAIN_DIR}/ビーム音.mp3")#敵のビーム音
     pg.display.set_caption("真！こうかとん無双")
+    pg.mixer.music.set_volume(0.1)#bgmの音量
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load(f"{MAIN_DIR}/fig/pg_bg.jpg")
     score = Score()
+    pg.mixer.init()#初期化
+    pygame.mixer.music.load(f"{MAIN_DIR}/maou.mp3")#maou.mp3のbgmの読み込み
+    pygame.mixer.music.play(1)#反映させる
 
     bird = Bird(3, (900, 400))
     bombs = pg.sprite.Group()
@@ -330,6 +339,8 @@ def main():
             if event.type == pg.QUIT:
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                sound.play(1)#スペースキーが押されたらビーム音が出る
+
               
                 if key_lst[pg.K_LSHIFT]:
                     #ここで左シフトが押されたならNeoBeamを打つ
@@ -350,13 +361,17 @@ def main():
           
         screen.blit(bg_img, [0, 0])
 
-        if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
+        if tmr%400 == 0:  # 400フレームに1回，敵機を出現させる
             emys.add(Enemy())
+            sound1.set_volume(1)#soundsの音量
+            sound1.play(1)#sound1で出る効果音の出力
 
         for emy in emys:
             if emy.state == "stop" and tmr%emy.interval == 0:
                 # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
                 bombs.add(Bomb(emy, bird))
+                enamy.play()#敵のビーム音を出す
+
 
         for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():
             exps.add(Explosion(emy, 100))  # 爆発エフェクト
@@ -366,6 +381,8 @@ def main():
         for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
             score.value += 1  # 1点アップ
+            sounds.set_volume(1)#soundsの音量
+            sounds.play(1)#soundsで出る効果音の出力
             
         if bird.state == "hyper":       
             for bomb in pg.sprite.spritecollide(bird,bombs,True):
@@ -377,6 +394,7 @@ def main():
         
         for emy in pg.sprite.groupcollide(emys, gravities, True, False).keys():
             exps.add(Explosion(emy, 50))  # 爆発エフェクト
+            sounds.play(1)#soundsで出る効果音の出力
 
         if len(pg.sprite.spritecollide(bird, bombs, True)) != 0 and bird.state == "normal":
             bird.change_img(8, screen) # こうかとん悲しみエフェクト
